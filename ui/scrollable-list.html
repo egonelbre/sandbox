@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<title>List demo</title>
+</head>
+<body>
+	<canvas id="view"></canvas>
+</body>
+<script>
+"use strict";
+
+function setclip(context, rect){
+	context.beginPath();
+	context.rect(rect.x, rect.y, rect.w, rect.h);
+	context.clip();
+}
+
+function highlight(context, rect){
+	context.beginPath();
+	context.strokeStyle = "#f00";
+	context.lineWidth = 2;
+	context.rect(rect.x, rect.y, rect.w, rect.h);
+	context.stroke();
+}
+
+function clamp(p, low, high){
+	return p < low ? low : p > high ? high : p;
+}
+
+var Rect = function(opts){
+	opts = opts || {};
+	this.x = 0 || opts.x; this.y = 0 || opts.y;
+	this.w = 0 || opts.w; this.h = 0 || opts.h;
+};
+
+Rect.prototype = {
+	offset: function(p){
+		this.x += p.x;
+		this.y += p.y;
+	},
+	clone: function(){ var r = this;
+		return new Rect(r);
+	},
+	contains: function(p){ var r = this;
+		return (r.x <= p.x) && (p.x < r.x + r.w) &&
+			(r.y <= p.y) && (p.y < r.y + r.h);
+	}
+};
+
+var List = function(items){ var list = this;
+	list.scrollY = 0;
+	list.itemHeight = 10;
+	list.items = items || [];
+};
+
+var Text = function(text){ var item = this;
+	item.value = text;
+	item.fill = "hsla(" + (Math.random() * 360 | 0) + ",70%,90%,1)";
+	item.color = "#000";
+
+	item.onclick = null;
+	item.onhover = null;
+};
+
+Text.prototype = {
+	_events: function(context, state, rect){ var item = this;
+		if(rect.contains(state.mouse)){
+			if(item.onhover){
+				item.onhover(state, item, state.mouse);
+			}
+		}
+
+		if(item.onclick){
+			state.clicks.forEach(function(click){
+				if(rect.contains(click)){
+					item.onclick(state, item, click);
+				}
+			});
+		}
+	},
+	process: function(context, state, rect){ var item = this;
+		context.save();
+		setclip(context, rect);
+		{
+			this._events(context, state, rect);
+
+			if(this.fill){
+				context.fillStyle = this.fill;
+				context.fillRect(rect.x, rect.y, rect.w, rect.h);
+			}
+
+			context.fillStyle = this.color;
+			context.font = (rect.h-2) + "px";
+			context.fillText(item.value, rect.x, rect.y + rect.h - 1);
+
+			if(rect.contains(state.mouse)){
+				highlight(context, rect);
+			}
+		}
+		context.restore();
+	}
+};
+
+List.prototype = {
+	_events: function(context, state, rect){ var list = this;
+		state.scrolls.forEach(function(scroll){
+			if(rect.contains(scroll)){
+				list.scrollY += scroll.dy / 10.0;
+			}
+		});
+	},
+	process: function(context, state, rect){ var list = this;
+		context.save();
+		setclip(context, rect);
+		{
+			this._events(context, state, rect);
+
+			var maxscroll = list.items.length * list.itemHeight - rect.h;
+			list.scrollY = clamp(list.scrollY, 0, maxscroll);
+
+			var r = new Rect(rect);
+			r.y -= list.scrollY;
+			r.h = list.itemHeight;
+			for(var i = 0; i < list.items.length; i++){
+				var item = list.items[i];
+				item.process(context, state, r);
+				r.y += list.itemHeight;
+			}
+
+			var sz = 5;
+			var sbx = rect.x + rect.w - sz;
+			context.fillStyle = "#ccc";
+			context.fillRect(sbx, rect.y, sz, rect.h);
+			context.fillStyle = "#f00";
+			context.fillRect(sbx, rect.y + (rect.h-sz)*list.scrollY/maxscroll, sz, sz);
+		}
+		context.restore();
+	}
+};
+
+var Panel = function(){ var panel = this;
+	panel.items = [];
+};
+
+Panel.prototype = {
+	add: function(widget, rect){ var panel = this;
+		panel.items.push({
+			rect: rect,
+			widget: widget
+		});
+	},
+	process: function(context, state, rect){var panel = this;
+		context.save();
+		setclip(context, rect);
+		{
+			for(var i = 0; i < panel.items.length; i++){
+				var item = this.items[i];
+				var r = item.rect.clone();
+				r.offset(rect);
+				item.widget.process(context, state, r);
+			}
+		}
+		context.restore();
+	}
+};
+
+var canvas = document.querySelector("#view");
+var context = canvas.getContext("2d");
+
+function newItem(title){
+	var item = new Text(title);
+	item.onclick = function(state, item, click){
+		console.log(item, click);
+	};
+	return item;
+}
+
+var texts = "lorem ipsum dolor sit amet consectetur adipisicing elit vero culpa in quidem fugiat laborum similique reiciendis incidunt nemo recusandae est doloribus qui asperiores sequi tenetur illo dignissimos eaque possimus consequuntur".split(" ");
+
+var first = new List(texts.map(newItem));
+texts.sort();
+var second = new List(texts.map(newItem));
+
+var rect = new Rect({x:10,y:10,w:280,h:130});
+var panel = new Panel(rect);
+panel.add(first, new Rect({x:0,y:0,w:90,h:100}));
+panel.add(second, new Rect({x:100,y:0,w:90,h:100}));
+
+var state = {
+	mouse: {x: 0, y: 0},
+	clicks: [],
+	scrolls: [],
+	focused: "",
+	reset: function(){
+		this.clicks = [];
+		this.scrolls = [];
+	}
+};
+
+canvas.onmousemove = function(ev){
+	state.mouse.x = ev.layerX;
+	state.mouse.y = ev.layerY;
+};
+
+canvas.onmousewheel = function(ev){
+	state.scrolls.push({
+		x: ev.layerX,
+		y: ev.layerY,
+		dx: ev.deltaX,
+		dy: ev.deltaY,
+		button: ev.button,
+		buttons: ev.buttons,
+		ctrlKey: ev.ctrlKey,
+		metaKey: ev.metaKey
+	});
+};
+
+canvas.onmousedown = function(ev){
+	state.clicks.push({
+		x: ev.layerX,
+		y: ev.layerY,
+		button: ev.button,
+		buttons: ev.buttons,
+		ctrlKey: ev.ctrlKey,
+		metaKey: ev.metaKey
+	});
+};
+
+function render(){
+	context.clearRect(0,0,1<<10,1<<10);
+	panel.process(context, state, rect);
+
+	context.fillStyle = "#0f0";
+    context.fillRect(state.mouse.x-1, state.mouse.y-1, 3, 3);
+
+    state.reset();
+
+	requestAnimationFrame(render);
+}
+requestAnimationFrame(render);
+</script>
+</html>

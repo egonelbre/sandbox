@@ -1,0 +1,124 @@
+<style>
+canvas { border: 1px solid #000;}
+</style>
+
+<div>
+<button id="animate" onclick="openNewPage('alpha')">alpha</button>	
+<button id="animate" onclick="openNewPage('beta')">beta</button>	
+<button id="animate" onclick="openNewPage('gamma')">gamma</button>	
+<button id="animate" onclick="openNewPage('delta')">delta</button>	
+</div>
+<canvas id="main"></canvas>
+
+<script>
+	
+var ms = 1;
+
+var Size = {x:640,y:480};
+var Padding = 20;
+// slow down here if needed
+var Speed = 0.7;
+
+function dist(a, b) {
+	var dx = a.x - b.x,
+		dy = a.y - b.y;
+	return Math.sqrt(dx*dx + dy*dy);
+}
+
+function now(){ return (new Date())|0; }
+
+var canvas = document.getElementById("main");
+var context = canvas.getContext("2d");
+
+canvas.width = Size.x;
+canvas.height = Size.y;
+
+var pages = [];
+
+function newPage(caption) {
+    return {
+    	caption: caption,
+    	hue: ((Math.random()*360)|0),
+    	get fillStyle() { return "hsla(" + this.hue + ", 50%, 70%, 0.5)"},
+    	get strokeStyle() { return "hsla(" + this.hue + ", 50%, 30%, 0.5)"},
+        pos: {x: Padding, y: -Size.y},
+        speed: {x: 0, y: 10},
+        size: {x: 300, y: Size.y - 2*Padding},
+        state: "entering",
+        update: function(dT){
+        	if(this.state == "final"){
+        		return;
+        	}
+
+			var target = {x: Padding, y: Padding};
+			if(this.state == "leaving"){
+				target = {
+					x: Padding,
+					y: 2*Size.y + Padding
+				};
+			}
+			var pos = this.pos;
+
+			// (ideally this would be quadratic easing)
+			var p = 0.9;
+			var delta = p*target.y + (1-p)*pos.y - pos.y;
+			pos.y += delta * dT * Speed / 100;
+
+			if(dist(pos, target) < 1){
+				pos.x = target.x;
+				pos.y = target.y;
+				this.state = "final";
+			}
+            if(pos.y > Size.y) { this.state = "left"; }
+        },
+        render: function(context){
+            context.beginPath();
+            context.fillStyle = this.fillStyle;
+            context.strokeStyle = this.strokeStyle;
+            context.lineWidth = 2;
+            
+            context.rect(this.pos.x, this.pos.y,
+                         this.size.x, this.size.y);
+            
+            context.fill();
+            context.stroke();
+
+            context.font = "28px bold Georgia";
+            context.fillStyle = "#333";
+            context.fillText(
+            	this.caption, 
+            	this.pos.x + Padding,
+            	this.pos.y + Padding + 28);
+        }
+    };
+}
+
+var prev = now();
+function animate(){
+    var next = now();
+    var delta = next - prev;
+    prev = next;
+    
+    context.clearRect(0, 0, Size.x, Size.y);
+    pages.map(function(page){
+        page.update(delta);
+        page.render(context);
+    });
+    
+    pages = pages.filter(function(page){
+        return page.state != "left";
+    });
+    window.requestAnimationFrame(animate);
+};
+window.requestAnimationFrame(animate);
+
+
+function openNewPage(caption){
+    pages.map(function(page){
+        page.state = "leaving"
+    });
+    pages.push(newPage(caption));
+}
+
+
+</script>

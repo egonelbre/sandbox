@@ -1,0 +1,243 @@
+<!doctype html> 
+<html> 
+  <head> 
+    <title>JS1k, 1k demo submission [ID]</title> 
+    <meta charset="utf-8" /> 
+  </head> 
+  <body> 
+    <canvas id="c"></canvas> 
+    <script> 
+      var b = document.body;
+      var c = document.getElementsByTagName('canvas')[0];
+      var a = c.getContext('2d');
+      document.body.clientWidth; // fix bug in webkit: http://qfox.nl/weblog/218
+    </script> 
+    <script> 
+// start of submission //
+c.height=320;c.width=480;
+// shorten canvas functions
+for(o in a)(function(o){a[o[0]+(o[6]||'')]=(''+a[o])[27]?a[o]:function(_){a[o]=_}})(o);
+
+var r = Math.random,
+    P2=Math.PI/2,
+    P=Math.pow,
+    C=Math.cos,
+    S=Math.sin;
+
+var
+ON_RAMP = 0,
+TAKEOFF = 1,
+IN_AIR  = 2,
+ON_GROUND = 3,
+CRASH = 4,
+FINISH = 5;
+
+m=[0,0];mc=[0,0];
+cam=[0,0,1.3];
+onmousemove=function(e,f,g){mc=[e.clientX,e.clientY]};
+onmousedown=function(e,f,g){if(St==ON_RAMP){St=TAKEOFF;Ts=Tm;}else if(St==TAKEOFF){St = IN_AIR;speed[1]-=2/(Math.abs(Tm-Ts-0.3) + 1);}};
+
+var
+  va=function(e,f,g){return [e[0]+f[0],e[1]+f[1],e[2]]},
+  vm=function(e,f,g){return va(e,vs(f,-1))},
+  vs=function(e,f,g){return [e[0]*f,e[1]*f,e[2]]},
+  // Bezier function for 2D
+  Bz=function(e,f,g){return va(va(vs(e[0],P(g=1-f,3)),vs(e[1],f*P(g,2)*3)),va(vs(e[3],P(f,3)),vs(e[2],g*P(f,2)*3)))},
+  // Calculates f-s projection on line rotated by e + PI/2 and multiplies the result by g
+  R =function(e,f,g){z=-f[0]*C(e)+f[1]*S(e);return[z*S(-e)*g,z*C(-e)*g]},
+  // clamp
+  cl=function(e,f,g){return e>g?g:e<f?f:e},
+  // apply camera to points
+  ac=function(e,f,g){f=f||cam;g=[];for(r=0;r<e.length;r++)g[r]=vs(va(e[r],f),f[2]);return g},
+  // draw railing
+  dr=function(e,f,g){
+    a.ld(cam[2]);a.ba();
+    for(g=0;g<1;g+=f){z=ac([Bz(e,g)])[0];a.m(z[0],z[1]);a.l(z[0],z[1]-10*cam[2]);}
+    dB(ac(e, va(cam,[0,-10])));a.s()},
+  // draw Bezier curve
+  dB=function(e,f,g){a.m(e[0][0],e[0][1]);a.bC(e[1][0],e[1][1],e[2][0],e[2][1],e[3][0],e[3][1])},
+  db=function(e,f,g){a.ba();dB(e);a.l(e[3][0],5000);a.l(e[0][0],5000);a.ca()},
+  ds=function(e,f,g){db(e);a.f()},
+  
+  zz=3;
+
+Tm=0.0;
+St=ON_RAMP;
+
+G=[[[100,100],[150, 120],[180,200],[300,200]],[[300,250],[700, 270],[700,700],[1250,700]],[[0,100],[0,100],[101,100],[101,100]]];
+track = 0.0;
+dtrack = 0.01;
+player=speed=[0,0];
+rotation = 0;
+protation = 0;
+
+/*
+__|_____|_________
+a.bezierCurveTo
+a.stroke();
+a.moveTo(D[0],D[1]);
+a.strokeStyle="#b00";
+a.lineWidth=cam[2]/2;
+a.beginPath();
+*/
+
+setInterval(function(e,f,g){
+  Tm+=0.03;
+  
+  // UPDATING WORLD
+  switch(St){
+    case ON_GROUND:
+      Y=Bz(G[1],track);
+      Z=Bz(G[1],track + dtrack);
+      dtrack = dtrack*0.9 + 0.0001;
+      track += dtrack;
+      
+      if(track > 0.97)
+        St=FINISH;
+      
+      var s=vm(Z,player);
+      rotation = Math.atan(s[1] / s[0]);
+      protation = rotation - P2;
+      player = Z;
+      
+      break;    
+    case ON_RAMP:;
+    case TAKEOFF:
+      if( track > 1 ){
+        St = IN_AIR;
+        return;
+      };
+      nt = track+dtrack;
+      Y=Bz(G[0],track);
+      Z=Bz(G[0],nt);
+      if(nt < 1)
+        dtrack = dtrack * 0.9 + (Z[1] - Y[1])/1000;
+      track = nt;
+      
+      var s=vm(Z,player);
+      speed=va(vs(speed,0.6),vs(s,0.4));
+      //speed = [speed[0] * 0.6 + sx * 0.4, speed[1] * 0.6 + sy * 0.4];
+      
+      rotation = Math.atan(s[1] / s[0]);
+      protation = rotation - P2;
+      player = Z;
+      
+      cam[0] -= 0.3;
+      cam[2] -= 0.005;
+      
+      break;
+    case IN_AIR:
+      //cam[2] -= 0.01;    
+      cam[0] -= speed[0];
+      cam[1] -= speed[1];
+      
+      // adjust the player
+      var dmx, dmy;
+      dmx = mc[0]-m[0];
+      dmy = mc[1]-m[1];
+      var d=va(mc,vs(m,-1));
+      
+      
+      rotation  += dmy / 100;      
+      protation += (dmy + dmx) / 100;
+      rotation = cl(rotation, -0.7, 0.9);
+      protation = cl(protation, rotation - P2 - 0.1, rotation - 0.2);
+      
+      //calculate forces
+      var f  = R(rotation,speed,0.004);
+      var f2 = R(protation,speed,0.006);
+      // apply forces
+      speed=va(vs(speed,0.999),va(f,f2));
+      speed[1]+=0.13;
+      // apply speed
+      player=va(player,speed);
+      
+      // collision detection
+      db(G[0]);
+      if(a.isPointInPath(player[0], player[1]))
+        St = CRASH;
+      db(G[1]);
+      if(a.isPointInPath(player[0], player[1])){
+        if(rotation -protation < 0.7)
+          St = CRASH;          
+        else
+          St = ON_GROUND;
+        
+        score=(player[0]/8|0)+'m';
+        for(track=0.1;Bz(G[1],track+=0.001)[0]<player[0];);
+      }
+      if(St===CRASH)
+        score = "CRASH";
+    case CRASH:;      
+    case FINISH:;
+  };
+  
+  // update mouse
+  m = mc;
+  
+  ////////
+  ////////
+  // CLEAR SCREEN
+  
+  a.fy("#eee");
+  a.fc(0,0,c.width,c.height);
+  
+  ////////
+  ////////
+  // DRAW SCORE
+  
+  if(St > IN_AIR){
+      a.sS("#000");
+      a.font="40px sans-serif";
+      a.sT(score, 240, 100);
+  }
+
+  ////////
+  ////////
+  // DRAW PLAYER
+
+  p=ac([player])[0];
+  a.lineWidth = 3.0 * cam[2];
+  var s =  20 * cam[2]
+  if(St===CRASH){
+    a.strokeStyle="#ccc";
+    a.fillStyle="#fff";
+    a.beginPath();
+    a.arc(p[0],p[1],s/2,0,7,1);
+    a.fill();
+    a.stroke();
+  } else {
+    var off = [s * C(rotation), s * S(rotation)];  
+    // skis
+    a.strokeStyle="#642";
+    a.beginPath();
+    a.moveTo(p[0] - off[0]/3, p[1] - off[1]/3);
+    a.lineTo(p[0] + 2*off[0]/3, p[1] + 2*off[1]/3);
+    a.stroke();
+    
+    // body
+    a.strokeStyle="#953";
+    var off = [s * 0.7 * Math.cos(protation), s * 0.7 * Math.sin(protation)];  
+    a.beginPath();
+    a.moveTo(p[0], p[1]);  
+    a.lineTo(p[0] + off[0], p[1] + off[1]);
+    a.stroke();
+    
+    a.fillStyle="#ccf";
+    a.beginPath();
+    a.arc(p[0] + off[0], p[1] + off[1],2*cam[2], 1,6,0);
+    a.stroke();
+    a.fill();
+  };
+  
+  ////////
+  // DRAW WORLD
+  a.fy("#321");ds(ac(G[0]));ds(ac(G[2]));
+  a.fy("#47b");ds(ac(G[1]));
+  a.sS("#611");for(i=3;i--;)dr(G[i],0.05)
+}, 33);
+
+  // end of submission //
+    </script> 
+  </body> 
+</html>

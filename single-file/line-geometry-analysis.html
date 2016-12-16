@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <title>List demo</title>
+  <style>
+  canvas { border: 0 solid #000; }
+  html, body { margin: 0; }
+  </style>
+</head>
+<body>
+  <canvas id="view"></canvas>
+<script>
+var canvas = document.querySelector("#view");
+var context = canvas.getContext("2d");
+
+var PointSize = 4;
+var LineRadius = 32;
+
+var state = {
+  mouse: {x: 0, y: 0},
+    moving: false,
+    hovering: -1,
+
+    line: [
+      {x: 30, y: 50},
+      {x: 80, y: 110},
+      {x: 120, y: 40},
+      {x: 220, y: 120}
+    ]
+};
+
+V2 = {};
+V2.add    = function(a, b) { return { x: a.x + b.x, y: a.y + b.y }; };
+V2.sub    = function(a, b) { return { x: a.x - b.x, y: a.y - b.y }; };
+V2.scale  = function(a, s) { return { x: a.x * s, y: a.y * s }; };
+V2.dot    = function(a, b) { return a.x * b.x + a.y * b.y; };
+V2.length = function(a)    { return Math.sqrt(a.x * a.x + a.y * a.y); };
+
+V2.distance = function(a, b) {
+  var dx = a.x - b.x;
+  var dy = a.y - b.y;
+  return Math.sqrt(dx * dx + dy * dy);
+};
+
+V2.midpoint = function(a, b){
+  return {
+    x: (a.x + b.x) / 2,
+    y: (a.y + b.y) / 2
+  };
+};
+
+V2.normal = function(a, b, size){
+  d = V2.sub(a, b);
+  n = {x: -d.y, y: d.x};
+  return V2.scale(n, size / V2.length(n));
+};
+V2.perpendicular = function(a){
+  return {x:-a.y, y:a.x};
+}
+
+canvas.onmousemove = function(ev){
+  state.mouse.x = ev.layerX;
+  state.mouse.y = ev.layerY;
+
+  if(!state.moving){
+    state.hovering = -1;
+    for(var i = 0; i < state.line.length; i++){
+      if(V2.distance(state.line[i], state.mouse) < PointSize){
+        state.hovering = i;
+      }
+    }
+  }
+
+  if(state.moving && (state.hovering >= 0)){
+    state.line[state.hovering].x = state.mouse.x;
+    state.line[state.hovering].y = state.mouse.y;
+  }
+};
+
+canvas.onmousedown = function(ev){
+    state.moving = true;
+};
+
+canvas.onmouseup = function(ev){
+  state.moving = false;
+};
+
+function circle(p, r){
+  context.beginPath();
+  context.arc(p.x, p.y, r, 0, 2*Math.PI);
+  context.fill();
+}
+
+function line(a, b){
+  context.beginPath();
+  context.moveTo(a.x, a.y);
+  context.lineTo(b.x, b.y);
+  context.stroke();
+}
+
+function render(){
+  context.clearRect(0,0,1<<10,1<<10);
+  context.lineWidth = 2;
+
+  for(var i = 0; i < state.line.length; i++){
+    context.fillStyle = "#f00";
+    if(i == state.hovering){
+      context.fillStyle = "#0f0";
+    }
+    circle(state.line[i], PointSize);
+  }
+
+  context.strokeStyle = "#888";
+  for(var i = 1; i < state.line.length; i++){
+    var a = state.line[i-1];
+    var b = state.line[i];
+    line(a, b);
+  }
+
+  context.fillStyle = "#338";
+  for(var i = 1; i < state.line.length; i++){
+    var a = state.line[i-1];
+    var b = state.line[i];
+
+    var center = V2.midpoint(a, b);
+    circle(center, 1);
+
+    var norm = V2.normal(a, b, LineRadius);
+    context.strokeStyle = "hsla(0, 60%, 60%, 0.8)";
+    //line(center, V2.add(center, norm));
+    line(a, V2.add(a, norm));
+    line(b, V2.add(b, norm));
+    line(V2.add(a, norm), V2.add(b, norm));
+
+    context.strokeStyle = "hsla(90, 60%, 60%, 0.8)";
+    //line(center, V2.sub(center, norm));
+    line(a, V2.sub(a, norm));
+    line(b, V2.sub(b, norm));
+    line(V2.sub(a, norm), V2.sub(b, norm));
+  }
+
+  var R2 = LineRadius * LineRadius;
+  var R4 = R2 * R2;
+  var sq2 = Math.sqrt(2);
+  var sq2R2 = sq2 * R2;
+  for(var i = 2; i < state.line.length; i++){
+    var a = state.line[i-2];
+    var b = state.line[i-1];
+    var c = state.line[i];
+
+    var nab = V2.normal(a, b, LineRadius);
+    var nbc = V2.normal(b, c, LineRadius);
+    var nabc = V2.add(nab, nbc);
+
+    var scale = sq2R2 / Math.sqrt(V2.dot(nab, nbc) + R2);
+    var pabc = V2.scale(nabc, scale / V2.length(nabc));
+
+    context.strokeStyle = "hsla(240, 80%, 60%, 0.8)";
+    line(b, V2.add(b, pabc));
+    context.strokeStyle = "hsla(280, 80%, 60%, 0.8)";
+    line(b, V2.sub(b, pabc));
+  }
+
+  var R2 = LineRadius * LineRadius;
+  var R4 = R2 * R2;
+  var sq2 = Math.sqrt(2);
+  var sq2R2 = sq2 * R2;
+  for(var i = 2; i < state.line.length; i++){
+    var a = state.line[i-2];
+    var b = state.line[i-1];
+    var c = state.line[i];
+
+    var nab = V2.normal(a, b, LineRadius);
+    var nbc = V2.normal(b, c, LineRadius);
+    var pab = V2.perpendicular(nab);
+    var dot = V2.dot(pab, nbc);
+
+    context.fillText(dot.toFixed(0), b.x, b.y);
+
+    context.strokeStyle = "hsla(340, 80%, 60%, 0.8)";
+    if(dot > 0){
+      line(V2.add(b, nab), V2.add(b, nbc));
+    } else {
+      line(V2.sub(b, nab), V2.sub(b, nbc));
+    }
+  }
+
+  requestAnimationFrame(render);
+}
+requestAnimationFrame(render);
+</script>
+</body>
+</html>

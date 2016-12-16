@@ -1,0 +1,78 @@
+<!doctype html>
+<html>
+<head>
+	<title>Rendering</title>
+	<meta charset="utf-8" />
+</head>
+<body>
+	<canvas id="c"></canvas>
+	<script>
+		var b = document.body;
+		var c = document.getElementsByTagName('canvas')[0];
+		var a = c.getContext('2d');
+		document.body.clientWidth; // fix bug in webkit: http://qfox.nl/weblog/218
+	</script>
+	<script>
+// start of submission //
+function surface(a, b, rot) {
+    var angle = a * Math.PI * 2,
+        radius = 100,
+        length = 400,
+        x = Math.cos(angle) * radius,
+        y = Math.sin(angle) * radius,
+        z = b * length - length / 2,
+        yAxisRotationAngle = -.4 - rot, // in radians!
+        rotatedX = x * Math.cos(yAxisRotationAngle) + z * Math.sin(yAxisRotationAngle),
+        rotatedZ = x * -Math.sin(yAxisRotationAngle) + z * Math.cos(yAxisRotationAngle);
+
+    return {
+        x: rotatedX,
+        y: y,
+        z: rotatedZ,
+        r: 0,
+        g: Math.floor(b * 255),
+        b: 0
+    };
+}
+
+canvas = c;
+context = a;
+
+
+var pX, pY,  // projected on canvas x and y coordinates
+    perspective = 350,
+    halfHeight = canvas.height / 2,
+    halfWidth = canvas.width / 2,
+    cameraZ = -700,
+    rot = 0,
+	zBuffer = [],
+    zBufferIndex;    
+
+function render(){
+	rot += 0.01;
+    
+    var i;
+    for (var i = 0; i < 1000; i++) {
+        if (point = surface(Math.random(), Math.random(), rot)) {
+            pX = Math.floor((point.x * perspective) / (point.z - cameraZ) + halfWidth);
+            pY = Math.floor((point.y * perspective) / (point.z - cameraZ) + halfHeight);
+            zBufferIndex = pY * canvas.width + pX;
+            if ((typeof zBuffer[zBufferIndex] === "undefined") || (point.z < zBuffer[zBufferIndex])) {
+                zBuffer[zBufferIndex] = point.z;
+                context.fillStyle = "rgb(" + point.r + "," + point.g + "," + point.b + ")";
+                context.fillRect(pX, pY, 4, 4);
+            }
+        }
+        context.fillStyle = 'hsla(0,100%,100%,0.001)';
+        context.fillRect(0,0,canvas.width,canvas.height)
+    }
+
+	setTimeout(render, 100);
+}
+
+render();
+
+// end of submission //
+	</script>
+</body>
+</html>

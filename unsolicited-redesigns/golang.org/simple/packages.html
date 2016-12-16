@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<title>The Go Programming Language</title>
+	<meta class="title" name="viewport" content="width=device-width, initial-scale=1">
+	<link href='http://fonts.googleapis.com/css?family=RobotoDraft:400,100,100italic,300,300ita‌​lic,400italic,500,500italic,700,700italic,900italic,900' rel='stylesheet' type='text/css'>
+	<link rel="stylesheet" href="main.css">
+	<link rel="shortcut icon" href="favicon.gif" type="image/x-icon" />
+</head>
+<body>
+	<div id="viewport">
+		<header>
+			<div class="center">
+				<nav>
+					<a href="#" class="title">Go</a>
+					<a href="#">Learn</a>
+					<a href="#">Packages</a>
+					<a href="#">Project</a>
+					<a href="#">Blog</a>
+					<a href="#">Help</a>
+					<div class="clear-fix"></div>
+				</nav>
+			</div>
+		</header>
+		<section id="content-wrapper">
+			<nav class="center">
+				<a href="#">Overview</a>
+				<a href="#">Index</a>
+			</nav>
+
+			<div id="package" class="center">
+				<div class="aside">
+					<h1>Package parse</h1>
+					<pre><code>import "text/template/parse</code></pre>
+					<div class="directory">
+						<h5>parent</h5>
+						<div><a href="#">text</a></div>
+						<div><a href="#">text/template</a></div>
+						<h5>contains</h5>
+						<div><a href="#">text/template/parse</a></div>
+						<h5>index</h5>
+						<div><span class="symbol">F</span><a href="#IsEmptyTree">IsEmptyTree</a></div>
+						<div><span class="symbol">F</span><a href="#Parse">Parse</a></div>
+						<div><span class="symbol">T</span><a href="#ActionNode">ActionNode</a></div>
+						<div><span class="symbol">T</span><a href="#BoolNode">BoolNode</a></div>
+						<div><span class="symbol">T</span><a href="#BranchNode">BranchNode</a></div>
+						<div><span class="symbol">T</span><a href="#ChainNode">ChainNode</a></div>
+						<div><span class="symbol">T</span><a href="#CommandNode">CommandNode</a></div>
+						<div><span class="symbol">T</span><a href="#DotNode">DotNode</a></div>
+						<div><span class="symbol">T</span><a href="#FieldNode">FieldNode</a></div>
+						<div><span class="symbol">T</span><a href="#IdentifierNode">IdentifierNode</a></div>
+						<div><span class="symbol">T</span><a href="#IfNode">IfNode</a></div>
+						<div><span class="symbol">T</span><a href="#ListNode">ListNode</a></div>
+						<div><span class="symbol">T</span><a href="#NilNode">NilNode</a></div>
+						<div><span class="symbol">T</span><a href="#Node">Node</a></div>
+						<div><span class="symbol">T</span><a href="#NodeType">NodeType</a></div>
+						<div><span class="symbol">T</span><a href="#NumberNode">NumberNode</a></div>
+						<div><span class="symbol">T</span><a href="#PipeNode">PipeNode</a></div>
+						<div><span class="symbol">T</span><a href="#Pos">Pos</a></div>
+						<div><span class="symbol">T</span><a href="#RangeNode">RangeNode</a></div>
+						<div><span class="symbol">T</span><a href="#StringNode">StringNode</a></div>
+						<div><span class="symbol">T</span><a href="#TemplateNode">TemplateNode</a></div>
+						<div><span class="symbol">T</span><a href="#TextNode">TextNode</a></div>
+						<div><span class="symbol">T</span><a href="#Tree">Tree</a></div>
+						<div><span class="symbol">T</span><a href="#VariableNode">VariableNode</a></div>
+						<div><span class="symbol">T</span><a href="#WithNode">WithNode</a></div>
+					</div>
+				</div>
+				<div class="content">
+					<div class="overview">
+						<h2>Overview</h2>
+						<p>Package parse builds parse trees for templates as defined by text/template and html/template. Clients should use those packages to construct templates rather than this one, which provides shared internal data structures not intended for general use.</p>
+					</div>
+
+					<div class="definition">
+						<h3><a name="IsEmptyTree" href="#IsEmptyTree"><span class="kind">func</span>IsEmptyTree</a><a class="source" href="#src">[src]</a></h3>
+						<div class="description">
+						<pre><code>func IsEmptyTree(n Node) bool</code></pre>
+						<p>IsEmptyTree reports whether this tree (node) is empty of everything but space.</p>
+						</div>
+					</div>
+
+					<div class="definition">
+						<h3><a name="Parse" href="#Parse"><span class="kind">func</span>Parse</a><a class="source" href="#src">[src]</a></h3>
+						<div class="description">
+						<pre><code>func Parse(name, text, leftDelim, rightDelim string, funcs ...map[string]interface{}) (treeSet map[string]*Tree, err error)</code></pre>
+						<p>Parse returns a map from template name to parse.Tree, created by parsing the templates described in the argument string. The top-level template will be given the specified name. If an error is encountered, parsing stops and an empty map is returned with the error.</p>
+						</div>
+					</div>
+
+					<div class="definition">
+						<h3><a name="ActionNode" href="#ActionNode"><span class="kind">type</span>ActionNode</a><a class="source" href="#src">[src]</a></h3>
+						<div class="description">
+<pre><code>type ActionNode struct {
+        NodeType
+        Pos
+
+        Line int       // The line number in the input. Deprecated: Kept for compatibility.
+        Pipe *PipeNode // The pipeline in the action.
+        // contains filtered or unexported fields
+}</code></pre>
+						<p>ActionNode holds an action (something bounded by delimiters). Control actions have their own nodes; ActionNode represents simple ones such as field evaluations and parenthesized pipelines.</p>
+</div>
+						<h4><a name="ActionNode.Copy" href="#ActionNode.Copy"><span class="kind">func</span>(*ActionNode) Copy</a><a class="source" href="#src">[src]</a></h4>
+						<div class="description">
+						<pre><code>func (a *ActionNode) Copy() Node</code></pre>
+						</div>
+
+						<h4><a name="ActionNode.String" href="#ActionNode.String"><span class="kind">func</span>(*ActionNode) String</a><a class="source" href="#src">[src]</a></h4>
+						<div class="description">
+						<pre><code>func (a *ActionNode) String() Node</code></pre>
+						</div>
+					</div>
+				</div>
+			</div>
+		</section>
+		<div id="footer-push">&nbsp;</div>
+	</div>
+	<div id="footer">
+		<footer>
+			<div class="center">
+				<p>Except as noted, the content of this page is licensed under the Creative Commons Attribution 3.0 License, and code is licensed under a BSD license.</p>
+				<p><a href="#">Terms of Service</a> | <a href="#">Privacy Policy</a></p>
+			</div>
+		</footer>
+	</div>
+</body>
+</html>

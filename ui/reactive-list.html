@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<title></title>
+	<link rel="stylesheet" href="">
+</head>
+<body>
+	<canvas id="view"></canvas>
+<script>
+var canvas = document.getElementById("view");
+var context = canvas.getContext("2d");
+
+var MOUSE = {x: 0, y: 0};
+
+var focused = "iota";
+var nextfocused = "";
+var items = [
+    "alpha",
+    "gamma",
+    "iota",
+    "beta",
+    "delta",
+    "kappa"
+];
+var sorted = items.slice().sort();
+
+canvas.onmousemove = function(ev){
+  console.log(ev.layerX, ev.layerY);
+  MOUSE = {
+    x: ev.layerX,
+    y: ev.layerY
+  };
+};
+
+function list(items, x){
+  var y = 40;
+  for(var i = 0; i < items.length; i++){
+    var item = items[i];
+    context.beginPath();
+    context.rect(x, y-8, 80, 9);
+    if(context.isPointInPath(MOUSE.x, MOUSE.y)){
+    	nextfocused = item;
+    }
+    if(item === focused){
+      context.fillStyle = "#f88";
+      context.fill();
+    }
+    context.fillStyle = "#000";
+    context.fillText(item, x, y);
+    y += 10;
+  }
+}
+
+function render(){
+	context.clearRect(0,0,1<<10,1<<10);
+    list(items, 10);
+    list(sorted, 100);
+    context.fillStyle = "#f88";
+    context.fillText(focused, 180, 40);
+
+    context.fillStyle = "#0f0";
+    context.fillRect(MOUSE.x, MOUSE.y, 1, 1);
+
+    focused = nextfocused || focused;
+
+	window.requestAnimationFrame(render);
+}
+window.requestAnimationFrame(render);
+
+</script>
+</body>
+</html>

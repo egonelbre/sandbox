@@ -1,0 +1,187 @@
+html, body {
+	margin: 0; padding: 0; height: 100%;
+	font-family: RobotoDraft,Helvetica Neue,Helvetica,Arial,sans-serif;
+	font-weight: 300;
+	line-height: 1.2;
+	color: #333333;
+}
+
+* { box-sizing: border-box; }
+
+.clear-fix { clear: both; }
+
+.center {
+	margin: 0 auto;
+	max-width: 900px;
+}
+
+#viewport {
+	min-height: 100%;
+	height: auto !important;
+	height: 100%;
+	margin: 0 auto -60px;
+}
+
+#footer-push {
+	height: 60px;
+}
+
+#footer {
+	height: 60px;
+	overflow: hidden;
+}
+
+header {
+	background: #E0EBF5;
+	box-shadow: 0 1px 4px 0 #E0EBF5;
+	border-bottom: 1px solid #46A8FF;
+}
+
+header .title {
+	font-weight: 600;
+}
+
+header a {
+	text-decoration: none;
+	color: #333333;
+}
+
+header #search {
+	float: right;
+	display: block;
+	padding: 4px 8px;
+	margin-right: 8px;
+	font-weight: 400;
+	width: 106px;
+}
+
+header nav {
+	padding: 8px 0;
+}
+
+header nav a {
+	display: inline-block;
+	padding: 8px 16px;
+	font-weight: 400;
+	border-bottom: 1px solid transparent;
+}
+
+header nav a:hover {
+	color: #3333ee;
+	border-bottom: 1px solid #46A8FF;
+}
+
+#content {
+	padding: 0px 16px;
+}
+
+section nav {
+	padding: 8px;
+}
+
+section nav a {
+	display: inline-block;
+	padding: 4px 8px;
+
+	text-decoration: none;
+	font-size: 0.8em;
+	font-weight: 400;
+	color: #888888;
+
+	border-bottom: 1px solid transparent;
+}
+
+section nav a:hover {
+	color: #3333ee;
+	border-bottom: 1px solid #46A8FF;
+}
+
+footer {
+	font-size: 0.7em;
+	text-align: center;
+}
+
+#package {
+
+}
+
+#package h5 {
+	line-height: 1em;
+	padding: 0;
+	margin-top: 0.8rem;
+	margin-bottom: 0.5rem;
+}
+
+#package .aside {
+	position: fixed;
+	width: 17rem;
+	padding-right: 1rem;
+	margin-left: -17rem;
+
+	max-height: 80%;
+	overflow-y: auto;
+}
+
+#package .content {
+	padding-top: 0.2rem;
+	padding-left: 1rem;
+}
+
+#package .symbol {
+	display: inline-block;
+	width: 0.8em;
+	font-style: italic;
+	font-size: 0.7em;
+}
+
+#package .definition a {
+	color: inherit;
+	text-decoration: none;
+}
+
+#package .definition h3 {
+	color: #3A48B7;
+	background: #E0EBF5;
+	padding: 4px 8px;
+}
+
+#package .definition .source {
+	float: right;
+	font-size: 0.7em;
+	line-height: 1.5rem;
+}
+
+#package .definition .kind {
+	display: inline-block;
+	font-size: 0.7em;
+	width: 2.3em;
+}
+
+#package .definition .description {
+	padding-left: 1em;
+}
+
+pre {
+	background: #efefef;
+	padding: 1em;
+	border-radius: 2px;
+	overflow-x: auto;
+}
+
+@media(max-width: 570px){
+	header nav a {
+		float: none;
+		display: block;
+		padding: 4px 16px;
+		font-weight: 400;
+		font-size: 0.9em;
+	}
+
+	header nav a.title {
+		float: right;
+		display: block;
+		padding: 32px;
+		margin-right: 8px;
+		font-size: 32px;
+	}
+}

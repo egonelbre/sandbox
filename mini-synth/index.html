@@ -1,0 +1,106 @@
+<!doctype html>
+<title>mjsfx</title>
+<h1>Playing</h1>
+<button onclick="stop()">Stop</button>
+<script>
+
+i2s=function(a,b,d,r,i){r=b?String.fromCharCode(a&255)+i2s(a>>8,b-1):"";return r};
+pack=function(a,b,d,r,i){r="";for(i=0;i<a.length;i+=1)r+=b[i]=="s"?a[i]:i2s(a[i],b.charCodeAt(i)-48);return r};
+a2d=function(a,b,d,r,i){r="";for(i=0;i<a.length;i+=1)b=32767*a[i]|0,b=b<-32767?-32767:32767<b?32767:b,b+=b<0?65536:0,r+=String.fromCharCode(b&255,b>>8);return r};
+ns=function(a,b,d,r,i){r=[];r.length=a;return r};
+map=function(a,b,d,r,i){r=a;for(i=0;i<a.length;i+=1)a[i]=b(i,a[i],d);return r};
+make=function(a,b,d,r,i){r=new Audio("data:audio/wav;base64,"+btoa(pack(["RIFF",36+(i=2*a.length),"WAVEfmt ", 16,1,2,44100,44100*4,4,16,"data",i,a2d(a)],"s4s4224422s4s")));return r};
+fre=function(a,b,d,r,i){r=220*Math.PI*Math.pow(2,a/12)/44100;return r};
+lgn=function(a,b,d,r,i){r=Math.exp(-Math.log(a=(a+.1)/4000)*Math.log(a)/4)/Math.sqrt(a*Math.PI*4)+.6;return r};
+synth=function(a,b,d,r,i){r=(.3*Math.sin(a*b+Math.sin(a)/44100)+.1*Math.sin(a*b*Math.pow(2,.11/12)+Math.PI*2)+.1*Math.sin(a*b*Math.pow(2,-.1/12)+Math.PI*.3))*lgn(a)/(a/44100+1);return r};
+synth2=function(a,b,d,r,i){r=Math.sin(a*b/2)/3+Math.cos(a*b)/2;return r};
+synth3=function(a,b,d,r,i){r=2*(a*b/(Math.PI*2) - ((a*b/(Math.PI*2) + 1/2)|0))/2;return r;};
+
+leadSynth = function(a,b,d,r,i){
+    var x = fre(d);
+    var bl = synth2(a/2|0,x);
+    var tl = synth(a/2|0,x) * (a % 2 ? Math.sin( d * Math.PI / 48 ) : 
+                                       Math.cos( d * Math.PI / 48));
+    r = (d/60)*tl + (1 - d/60)*bl;
+    return r
+}
+
+bassSynth = function(a,b,d,r,i){
+    var x = fre(d);
+    r = synth2(a/2|0,x/2) + synth2(a/2|0,x/2.03);
+    return r
+}
+
+gen = function(instr, key){
+    samples=map(ns(instr.duration), instr.synth, key);
+    for(var x = 0; x < 200; x++){
+        samples[x] *= x / 200;
+        samples[samples.l-x] *= x / 200;
+    }
+    return make(samples);
+}
+
+genAll = function(instr){
+    var key = 0;
+    for(var i=1; i < instr.events.length; i += 3){
+        key += instr.events[i];
+        if(!instr.sounds[key]){
+            instr.sounds[key] = gen(instr, key);
+            console.log("generated for : ", key);
+        }
+    }
+    console.log("generated");
+}
+
+doPlay = function(instr){
+    instr.time += instr.incer;
+    instr.total += instr.incer;
+    //console.log(instr.name, "=========");
+    //console.log(instr.time);
+    while( instr.time > instr.events[instr.idx]){
+        instr.time -= instr.events[instr.idx];
+        instr.key += instr.events[instr.idx+1];
+        instr.velocity += instr.events[instr.idx+2];
+
+        if(instr.enabled){
+        instr.sounds[instr.key].pause();
+        instr.sounds[instr.key].currentTime=0;
+        instr.sounds[instr.key].volume=instr.velocity/128;
+        instr.sounds[instr.key].play();
+    }
+
+        instr.idx = instr.idx + 3;
+        if(instr.idx>=instr.events.length){
+            instr.done=true;
+            instr.idx = 0;
+            instr.key = 0;
+            instr.time = 0;
+            instr.velocity = 0;
+        }
+    }
+}
+
+function play(){
+    var d = 0;
+    for(var i=0; i < instruments.length; i+=1){
+        (!instruments[i].done) && doPlay(instruments[i]);
+        d += instruments[i].done ? 1 : 0;
+    }
+    (d == instruments.length) && stop();
+}
+
+setTimeout(function(){iv1=setInterval(play, 30);}, 1000);
+function stop(){ clearInterval(iv1);};
+
+</script>
+
+<script src="song.js"></script>
+
+<script>
+    for(var i=0; i < instruments.length; i += 1){
+        genAll(instruments[i]);
+        instruments[i].total = 0;
+        instruments[i].enabled = true;
+    }
+        
+</script>

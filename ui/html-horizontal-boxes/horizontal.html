@@ -1,0 +1,56 @@
+<div id="content">
+	<div id="lineup">
+	    <div class="stage">
+	    	<div href="#">Nav Item</div>
+	    </div>
+	    <div class="stage stage-wide">
+	    	<div href="#">Short Item</div>
+	    </div>
+	    <div class="stage">
+	    	<div href="#">Really Long Nav Item</div>
+	    </div>
+	</div>
+</div>
+<style>
+
+* {margin: 0; padding: 0;}
+#content {
+	position: fixed;
+	overflow-x: scroll;
+	overflow-y: auto;
+	left: 0; top: 0; right: 0; bottom: 0;
+}
+
+#lineup {
+    display: table;
+    table-layout: fixed;
+    width: 1%;
+    height: 100%;
+}
+
+#lineup .stage {
+	position: relative;
+    display: table-cell;
+    width: 300px;
+    xheight: 100%;
+    margin: 10px;
+}
+
+#lineup .stage-wide {
+	width: 500px;
+}
+
+#lineup div {
+    display: block;
+    border: 1px solid red;
+    text-align: center;
+    margin: 0 5px;
+    background: #999
+
+    width: 100%;
+}
+
+div {
+    background: #ccc
+}
+</style>

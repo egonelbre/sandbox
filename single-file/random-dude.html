@@ -1,0 +1,177 @@
+<!doctype html> 
+<html> 
+	<head> 
+		<title>JS1k, 1k demo submission [ID]</title> 
+		<meta charset="utf-8" /> 
+	</head> 
+	<body> 
+		<canvas id="c"></canvas> 
+		<script> 
+			var b = document.body;
+			var c = document.getElementsByTagName('canvas')[0];
+			var a = c.getContext('2d');
+			document.body.clientWidth; // fix bug in webkit: http://qfox.nl/weblog/218
+		</script> 
+		<script> 
+// start of submission //
+c.width = 1000;
+c.height = 1000;
+</script>
+<script>
+var r=Math.random;
+
+var _t = [80,20];
+var t = function(text){
+  a.fillText(text, _t[0], _t[1]);
+  _t = [_t[0], _t[1]+10];
+};
+
+var len = function(obj){
+  var r = 0;
+  for (var e in obj)
+    r++;
+  return r;
+};
+
+var pick = function(obj, i){
+  var c = 0, r = undefined;
+  for(var e in obj){
+    r = e;
+    if (c >= i)
+      break;
+    c++;
+  };
+  return r;
+};
+
+var locs = { 'in' : ['bar', 'house', 'cave', 'jar'],
+             'on' : ['field', 'rock', 'street', 'bridge'] };
+var objs = ['a knife', 'a spike', 'a diamond', 'a rope', 'fire', 'a fish'];
+
+var pre = pick(locs, len(locs) * r() | 0),
+    loc = locs[pre][ locs[pre].length * r() | 0 ];
+
+t('you are ' + pre + ' a ' + loc);
+
+var pickObjs=function(objs, c){
+  var cp = objs,
+      res = [];
+  while((c > 0) && (cp.length > 0)){
+    var i = cp.length * r() | 0;
+    res.push(cp[i]);
+    cp.splice(i,1);
+    c--;
+  }
+  return res;
+};
+
+targs = pickObjs(objs, 3);
+
+t('you combine ' + targs[0] + ' with ' + targs[1] + ' and make ' + targs[2]);
+t('you throw ' + targs[2] + ' at the ' + loc);
+t('a man comes to you');
+t('"throwing ' + targs[2] +'? why would you do that?"');
+t('the man dies out of boredom');
+
+var g=function(s,l){return (r()*s + l);}
+
+var makeCharacter = function(){
+  var c = {}, w=h=0;
+  
+  //var isman = r() > 0.5;
+  var isman = true;
+  
+  c.head=[[0,0]];
+  c.head.push( [ g(20,10), g(2,4) ] );
+  c.head.push( [ g(10,c.head[1][0] - 2), g(4, 18 + c.head[1][1])] );
+  c.head.push( [ g(10, 10), g(4, 18 + c.head[2][1])] );
+  
+  c.body=[c.head[3]];
+  c.body.push( [ g(10, c.body[0][0] - 5), g(4,5 + c.body[0][1])]);
+  c.body.push( [ g(10, 5 + c.body[1][0]), g(4, 5 + c.body[1][1])]);
+  c.body.push( [ g(10, 5 + c.body[2][0]), g(4, 30 + c.body[2][1])]);
+  c.body.push( [ g(-4, c.body[3][0]), g(4, 30 + c.body[3][1])]);
+  
+  c.hands=[c.body[2]];
+  c.hands.push( [ g(10, c.hands[0][0] + 5), c.hands[0][1]]);
+  c.hands.push( [ g(10, c.hands[0][0] + 20), g(20, 20 + c.hands[1][1])]);
+  c.hands.push( [ g(6, c.hands[2][0] - 3), g(20, 20 + c.hands[2][1])]);
+  c.hands.push( [ g(6, c.hands[3][0] - 20), c.hands[3][1]]);
+  c.hands.push( [ g(6, c.hands[0][0] - 10), c.hands[0][1]]);
+  
+  c.legs=[ c.body[4] ];
+  c.legs.push( [g(7, c.legs[0][0] - 2) , g(10, 60 + c.legs[0][1])]);
+  
+  if(isman){
+    c.legs.push( [g(3, c.legs[1][0] - 20) , c.legs[1][1] ]);
+    c.legs.push( [g(4,5) , g(5, 5 + c.legs[0][1])] );
+  };
+  
+  c.height = c.legs[c.legs.length-2][1];
+  return scaleCharacter(c, 0.4);
+};
+
+var scaleArray = function(a, s){
+  var x=[];
+  for(var i=0; i<a.length; i++)
+    x[i]=[a[i][0]*s, a[i][1]*s];
+  return x;
+};
+
+var scaleCharacter = function(c, s){
+  n = {};
+  n.head   = scaleArray(c.head, s);
+  n.body   = scaleArray(c.body, s);
+  n.legs   = scaleArray(c.legs, s);
+  n.hands  = scaleArray(c.hands, s);
+  n.height = c.height * s;
+  return n;
+};
+
+var drawShape = function(b, s){
+  a.beginPath();
+  a.moveTo(b[0] + s[0][0], b[1] + s[0][1]);
+  for(var i=1;i<s.length;i++)
+    a.lineTo(b[0] + s[i][0], b[1] + s[i][1]);
+  for(var i=s.length-1;i>=0;i--)
+    a.lineTo(b[0] - s[i][0], b[1] + s[i][1]);
+  a.closePath();
+};
+
+var drawCharacter = function(c){
+  a.strokeStyle = '#000';  
+  var off = [-20, 10];
+  
+  a.fillStyle = '#f00';
+  drawShape([_t[0] + off[0], _t[1] + off[1]], c.hands);
+  a.fill();
+  a.stroke();
+  
+  a.fillStyle = '#f00';  
+  drawShape([_t[0] + off[0], _t[1] + off[1]], c.body);
+  a.fill();
+  a.stroke();
+  
+  a.fillStyle = '#f99';
+  drawShape([_t[0] + off[0], _t[1] + off[1]], c.head);
+  a.fill();
+  a.stroke();
+  
+  a.fillStyle = '#2a2';
+  drawShape([_t[0] + off[0], _t[1] + off[1]], c.legs);
+  a.fill();
+  a.stroke();
+  
+  _t = [_t[0], _t[1] + off[1]*2 + c.height];
+};
+
+ch = makeCharacter();
+drawCharacter(ch);
+
+ch = makeCharacter();
+drawCharacter(ch);
+
+// end of submission //
+		</script> 
+	</body> 
+</html>
