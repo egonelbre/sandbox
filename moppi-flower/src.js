@@ -17,6 +17,8 @@ window.onresize = function(e) {
 };
 window.onresize();
 
+var BOUNCE = 0;
+
 (function(tick) {
 	var last = new Date();
 	var time = 0;
@@ -27,7 +29,19 @@ window.onresize();
 			var now = new Date();
 			var dt = (now - last) * 0.001;
 			last = now;
+			if (dt > 0.1) {
+				dt = 0.1;
+			}
 			time += dt;
+
+			if (BOUNCE < 1.0) {
+				BOUNCE += dt / 2.5;
+			}
+
+			//var p = Math.sin(time * 8) * 0.5 + 0.5
+			//var p = bounce(p, 0, 1, 1) * 3;
+			var NEXTSTROKE = 8 - bounce(BOUNCE, 0, 4, 1);
+			STROKEWIDTH = lerp(STROKEWIDTH, NEXTSTROKE, 0.5);
 
 			var s = Math.sin(time * 8);
 			var c = Math.cos(time * 7.3);
@@ -48,6 +62,13 @@ function random(min, max) {
 
 function randomsnap(min, max, snap) {
 	return +min + Math.floor(Math.random() * (+max - +min) / +snap) * +snap;
+}
+
+function bounce(t, start, end, duration) {
+	t = t / duration
+	var ts = t * t
+	var tc = ts * t
+	return start + end * (33 * tc * ts + -106 * ts * ts + 126 * tc + -67 * ts + 15 * t)
 }
 
 class Interval {
@@ -138,7 +159,7 @@ const MAXTURN = TAU / 2.0;
 const ANGLESNAP = TAU / 8.0;
 const EPSILON = TAU / 128;
 
-const STROKEWIDTH = 5;
+var STROKEWIDTH = 5;
 
 const State = {
 	Growing: 0,
@@ -306,15 +327,19 @@ class Stem {
 				this.arc.counterClock);
 		}
 
-		context.lineCap = "round";
-		context.strokeStyle = this.stroke;
-		context.lineWidth = this.width;
-		context.stroke();
+		if (this.stroke) {
+			context.lineCap = "round";
+			context.strokeStyle = this.stroke;
+			context.lineWidth = this.width;
+			context.stroke();
+		}
 
-		context.lineCap = "round";
-		context.strokeStyle = this.fill;
-		context.lineWidth = this.width - 2 * STROKEWIDTH;
-		context.stroke();
+		if (this.fill) {
+			context.lineCap = "round";
+			context.strokeStyle = this.fill;
+			context.lineWidth = this.width - 2 * STROKEWIDTH;
+			context.stroke();
+		}
 	}
 }
 
@@ -323,7 +348,7 @@ class Node {
 		this.stem = stem;
 		this.root = stem.root;
 		this.life = 0.0;
-		this.duration = 0.2;
+		this.duration = 0.6;
 		this.radius = stem.width * 1.2;
 		this.state = State.Growing;
 		this.fill = stem.fill;
@@ -361,14 +386,16 @@ class Node {
 	}
 
 	draw(context) {
+		var p = bounce(this.life, 0, 1, 1);
+
 		context.fillStyle = this.stroke;
 		context.beginPath();
-		context.arc(this.root.x, this.root.y, this.life * this.radius, 0, TAU, true);
+		context.arc(this.root.x, this.root.y, p * this.radius, 0, TAU, true);
 		context.fill();
 
 		context.fillStyle = this.fill;
 		context.beginPath();
-		var r = this.life * this.radius - STROKEWIDTH;
+		var r = p * this.radius - STROKEWIDTH;
 		if (r < 0) {
 			r = 0;
 		}
@@ -380,7 +407,7 @@ class Node {
 class Tree {
 	constructor() {
 		var stem = new Stem();
-		stem.speed = 300;
+		stem.speed = 200;
 		stem.stroke = "#333";
 		stem.fill = "#fff";
 		// stem.fill = "hsla(90, 70%, 40%, 0.8)";
@@ -415,7 +442,7 @@ class Tree {
 				var color = "hsla(0, 0%, 20%, 0.5)";
 				// var color = "#666";
 				branch.stroke = color;
-				branch.fill = color;
+				branch.fill = null;
 				branch.direction = lerp(last.direction, last.direction + last.turn + last.branchAngle, last.end);
 				if (last.turn < 0) {
 					branch.turn = randomsnap(ANGLESNAP, MAXTURN * 2, ANGLESNAP * 0.5);
@@ -435,6 +462,8 @@ class Tree {
 			this.stems.push(stem);
 			var node = new Node(stem);
 			this.nodes.push(node);
+
+			BOUNCE = 0;
 		}
 
 		if (this.stems.length > 4) {
@@ -493,7 +522,7 @@ var camera = Vector.Zero;
 function Tick(dt) {
 	//context.clearRect(0, 0, screenWidth, screenHeight);
 
-	context.fillStyle = "#eee";
+	context.fillStyle = "#ffe";
 	//context.fillStyle = "hsla(0, 0%, 90%, 0.3)";
 	context.fillRect(0, 0, screenWidth, screenHeight);
 
