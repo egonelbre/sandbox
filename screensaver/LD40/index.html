@@ -1,0 +1,31 @@
+<!doctype html>
+<meta charset=utf-8 />
+<title>Moppi Flowers</title>
+<style>
+	* {	
+		font-family: Georgia;
+		background: #000;
+		margin : 0;
+		padding : 0;
+	}
+
+	body, html {
+	    width: 100%;
+    	height: 100%;
+    	overflow: hidden;
+	}
+	canvas {
+	    position:absolute;
+	}
+</style>
+
+<canvas id="view">
+</canvas>
+
+<script src="/~reload.js"></script>
+<script>
+	var reloader = new Reloader();
+	reloader.onchanges = function(){ location.reload(); };
+</script>
+
+<script src="src.js"></script>
