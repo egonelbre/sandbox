@@ -5,95 +5,153 @@
 
 using namespace std;
 
+static float frand()
+{
+	return rand() / static_cast<float>(RAND_MAX);
+}
+
 template <size_t InputCount, size_t OutputCount>
-struct Layer {
-  array<float, OutputCount> Bias;
-  array<array<float, InputCount>, OutputCount> Weight;
+struct Layer
+{
+	using InputData = array<float, InputCount>;
+	using OutputData = array<float, OutputCount>;
 
-  void Randomize() {
-    for (size_t i = 0; i < OutputCount; i++) {
-      Bias[i] = rand() / static_cast<float>(RAND_MAX);
-      for (size_t k = 0; k < InputCount; k++) {
-        Weight[i][k] = rand() / static_cast<float>(RAND_MAX);
-      }
-    }
-  }
+	array<float, OutputCount> Bias;
+	array<array<float, InputCount>, OutputCount> Weight;
 
-  constexpr float Activate(float sum) { return sum > 0.0f ? sum : 0.0f; }
+	constexpr float Error(const float a, const float b) {
+		return 0.5f * powf(a - b, 2.0f);
+	}
 
-  constexpr void Forward(array<float, InputCount> *input,
-                         array<float, OutputCount> *output) {
-    for (size_t i = 0; i < OutputCount; i++) {
-      float sum = Bias[i];
-      auto weights = &Weight[i];
-      for (size_t k = 0; k < InputCount; k++) {
-        sum += (*input)[k] * (*weights)[k];
-      }
-      (*output)[i] = Activate(sum);
-    }
-  }
+	constexpr float ErrorPD(const float a, const float b) {
+		return a - b;
+	}
+
+	constexpr float Activate(const float a)
+	{
+		return 1.0f / (1.0f + expf(-a));
+	}
+	
+	constexpr float ActivatePD(const float a)
+	{
+		return a * (1.0f - a);
+	}
+	
+	constexpr void Forward(const InputData *__restrict input, OutputData *__restrict output)
+	{
+		for (size_t i = 0; i < OutputCount; i++)
+		{
+			float sum = Bias[i];
+			auto weights = &Weight[i];
+			for (size_t k = 0; k < InputCount; k++)
+			{
+				sum += (*input)[k] * (*weights)[k];
+			}
+			(*output)[i] = Activate(sum);
+		}
+	}
+/*
+	void Backward(InputData *__restrict input, OutputData *__restrict expected)
+	{
+		OutputData current;
+		Forward(input, &current);
+
+		float sum = 0.0f;
+		for (size_t i = 0; i < OutputCount; i++)
+		{
+			float error = ErrorPD(output[i], target[i]);
+			float activation = ActivatePD(output[i]);
+
+			float sum = Bias[i];
+			auto weights = &Weight[i];
+			for (size_t k = 0; k < InputCount; k++)
+			{
+				sum += (*input)[k] * (*weights)[k];
+			}
+            (*output)[i] = Activate(sum);
+        }
+	}
+*/
 };
 
+template <size_t InputCount, size_t OutputCount>
+void RandomizeLayer(Layer<InputCount, OutputCount> *layer) {
+	for (size_t i = 0; i < OutputCount; i++)
+	{
+		layer->Bias[i] = frand();
+	}
+
+	for (size_t i = 0; i < OutputCount; i++)
+		for (size_t k = 0; k < InputCount; k++)
+		{
+			layer->Weight[i][k] = frand();
+		}
+}
+
 template <size_t InputSize, size_t OutputSize>
-constexpr void FeedForward(array<float, InputSize> *input,
-                           array<float, OutputSize> *output,
-                           Layer<InputSize, OutputSize> *layer) {
-  layer->Forward(input, output);
+constexpr void FeedForward(array<float, InputSize> * __restrict input, array<float, OutputSize> * __restrict output, Layer<InputSize, OutputSize> * __restrict layer)
+{
+	layer->Forward(input, output);
 }
 
-template <size_t InputSize, size_t HiddenSize, size_t OutputSize,
-          typename... Layers>
-constexpr void FeedForward(array<float, InputSize> *input,
-                           array<float, OutputSize> *output,
-                           Layer<InputSize, HiddenSize> *layer,
-                           Layers... layers) {
-  array<float, HiddenSize> hidden;
-  layer->Forward(input, &hidden);
-  FeedForward(&hidden, output, layers...);
+template <size_t InputSize, size_t HiddenSize, size_t OutputSize, typename... Layers>
+constexpr void FeedForward(array<float, InputSize> * __restrict input,
+	array<float, OutputSize> * __restrict output,
+	Layer<InputSize, HiddenSize> * __restrict layer,
+	Layers... layers)
+{
+	array<float, HiddenSize> hidden;
+	layer->Forward(input, &hidden);
+	FeedForward(&hidden, output, layers...);
 }
 
-int main() {
-  srand(time(0));
+int main()
+{
+	Layer<16, 16> first;
+	Layer<16, 8> second;
+	Layer<8, 4> third;
 
-  Layer<10, 10> first;
-  Layer<10, 5> second;
-  Layer<5, 3> third;
+	RandomizeLayer(&first);
+	RandomizeLayer(&second);
+	RandomizeLayer(&third);
 
-  first.Randomize();
-  second.Randomize();
-  third.Randomize();
+	array<float, 16> input_data;
+	array<float, 16> first_data;
 
-  array<float, 10> input_data;
-  array<float, 10> first_data;
-  array<float, 5> second_data;
-  array<float, 3> output_data;
+	array<float, 8> second_data;
+	array<float, 4> output_data;
 
-  for (size_t i = 0; i < input_data.size(); i++) {
-    input_data[i] = rand() / static_cast<float>(RAND_MAX);
-  }
+	for (size_t i = 0; i < input_data.size(); i++)
+	{
+		input_data[i] = frand();
+	}
 
-  printf("IN: ");
-  for (size_t i = 0; i < input_data.size(); i++) {
-    printf("%.2f, ", input_data[i]);
-  }
-  printf("\n");
+	printf("IN: ");
+	for (size_t i = 0; i < input_data.size(); i++)
+	{
+		printf("%.2f, ", input_data[i]);
+	}
+	printf("\n");
 
-  first.Forward(&input_data, &first_data);
-  second.Forward(&first_data, &second_data);
-  third.Forward(&second_data, &output_data);
+	first.Forward(&input_data, &first_data);
+	second.Forward(&first_data, &second_data);
+	third.Forward(&second_data, &output_data);
 
-  printf("OUT: ");
-  for (size_t i = 0; i < output_data.size(); i++) {
-    printf("%.2f, ", output_data[i]);
-  }
-  printf("\n");
+	printf("OUT: ");
+	for (size_t i = 0; i < output_data.size(); i++)
+	{
+		printf("%.2f, ", output_data[i]);
+	}
+	printf("\n");
 
-  FeedForward(&input_data, &output_data, &first, &second, &third);
-  printf("OUT: ");
-  for (size_t i = 0; i < output_data.size(); i++) {
-    printf("%.2f, ", output_data[i]);
-  }
-  printf("\n");
+	FeedForward(&input_data, &output_data, &first, &second, &third);
 
-  return 0;
+	printf("OUT: ");
+	for (size_t i = 0; i < output_data.size(); i++)
+	{
+		printf("%.2f, ", output_data[i]);
+	}
+	printf("\n");
+
+	return 0;
 }
