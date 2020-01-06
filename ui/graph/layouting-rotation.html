@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Graph Layouting Rotation</title>
+	<style type="text/css">
+		#view {
+		    background: #fff;
+		}
+		body, html {
+		    background: #444;
+		    width: 100%;
+		    height: 100%;
+		    margin: 0px;
+		}
+	</style>
+</head>
+<body>
+<canvas id="view"></canvas>
+</body>
+<script type="text/javascript">
+(function(){
+var view = document.getElementById("view");
+var context = view.getContext("2d");
+
+var area = R(0, 0, 800, 600).insetBy(5);
+
+function R(left, top, right, bottom) {
+    return {
+        left: left,
+        top: top || left,
+        right: right || left,
+        bottom: bottom || top || left,
+        clone: function () {
+            return R(this.left, this.top, this.right, this.bottom);
+        },
+
+        get width() {
+            return this.right - this.left;
+        },
+        get height() {
+            return this.bottom - this.top;
+        },
+        get size() {
+            return {
+                x: this.width,
+                y: this.height
+            }
+        },
+        // inset/outset by a single value
+        insetBy: function (v) {
+            return R(this.left + v, this.top + v, this.right - v, this.bottom - v);
+        },
+        outsetBy: function (v) {
+            return this.insetBy(-v);
+        },
+        // inset explicitly each side
+        inset: function (sides) {
+            return R(this.left + sides.left, this.top + sides.top, this.right - sides.right, this.bottom - sides.bottom);
+        },
+        outset: function (sides) {
+            return R(this.left - sides.left, this.top - sides.top, this.right + sides.right, this.bottom + sides.bottom);
+        },
+        offset: function (p) {
+            return R(this.left + p.x, this.top + p.y, this.right + p.x, this.bottom + p.y);
+        },
+        stroke: function (context, color, lineWidth) {
+            context.lineWidth = lineWidth || 2;
+            context.strokeStyle = color;
+            context.beginPath();
+            context.rect(this.left, this.top, this.right - this.left, this.bottom - this.top);
+            context.closePath();
+            context.stroke();
+        },
+        fill: function (context, color) {
+            context.fillStyle = color;
+            context.fillRect(this.left, this.top, this.right - this.left, this.bottom - this.top);
+        },
+        toString: function () {
+            return "[" + [this.left, this.top, this.right, this.bottom].join(", ") + "]";
+        }
+    };
+}
+
+var mouse = {
+    x: 640,
+    y: 480
+};
+
+function mouseZ() {
+    return 2 * Math.PI * (mouse.x - area.right / 2) / area.right;
+}
+
+function Axis(position, r) {
+    return {
+        rect: r,
+        count: 10,
+        position: position,
+        draw: function (context) {
+            this.rect.stroke(context, "hsla(0,80%,60%,1)");
+            var rotation = mouseZ();
+            context.font = "24px Courier";
+            var sz = {x:context.measureText("Hello"), y:20};
+            
+            var label = function(){
+                context.fillStyle = "#fff";
+                context.fillText("Hello", 0, 0);
+            };
+            
+            if (this.position == "left") {
+                for (var i = 0; i < this.count; i += 1) {
+                    var x = this.rect.right,
+                        y = this.rect.top + (this.rect.bottom - this.rect.top) * ((i + 1) / (this.count + 1));
+
+                    var r = R(x, y, x, y).outsetBy(4);
+                    r.stroke(context, "hsla(120,80%,60%,1)");
+
+                    context.fillStyle = "hsla(120,80%,60%,0.5)";
+                    context.save();
+                    context.translate(x, y);
+                    context.rotate(rotation);
+                    context.translate(-sz.x, sz.y / 2);
+                    label();
+                    context.restore();
+                }
+            } else if (this.position == "right") {
+                for (var i = 0; i < this.count; i += 1) {
+                    var x = this.rect.left,
+                        y = this.rect.top + (this.rect.bottom - this.rect.top) * ((i + 1) / (this.count + 1));
+
+                    var r = R(x, y, x, y).outsetBy(4);
+                    r.stroke(context, "hsla(120,80%,60%,1)");
+
+                    context.fillStyle = "hsla(120,80%,60%,0.5)";
+                    context.save();
+                    context.translate(x, y);
+                    context.rotate(rotation);
+                    context.translate(0, sz.y / 2);
+                    label();
+                    context.restore();
+                }
+            } else if (this.position == "top") {
+
+            } else if (this.position == "bottom") {
+                var snapcenter = Math.abs(rotation) < 0.4;
+                for (var i = 0; i < this.count; i += 1) {
+                    var x = this.rect.left + (this.rect.right - this.rect.left) * ((i + 1) / (this.count + 1)),
+                        y = this.rect.top;
+
+                    var r = R(x, y, x, y).outsetBy(4);
+                    r.stroke(context, "hsla(120,80%,60%,1)");
+
+                    context.fillStyle = "hsla(120,80%,60%,0.5)";
+                    context.save();
+                    context.translate(x, y);
+                    if(snapcenter){
+                        context.translate(0, Math.max(sz.y, Math.abs(Math.sin(rotation) * sz.x) / 2));
+                    }
+                    context.rotate(rotation);
+                    if(snapcenter){
+                        context.translate(-sz.x / 2, sz.y / 2);
+                    } else {
+                        if(rotation < 0){
+                            context.translate(-sz.x, sz.y / 2);
+                        } else {
+                            context.translate(0, sz.y / 2);
+                        }
+                    }
+
+                    label();
+                    context.restore();
+                }
+            }
+        }
+    }
+}
+
+var SIZE = 100;
+
+var top = Axis("top", R(area.left + SIZE, area.top, area.right - SIZE, area.top + SIZE));
+var bottom = Axis("bottom", R(area.left + SIZE, area.bottom - SIZE, area.right - SIZE, area.bottom));
+var left = Axis("left", R(area.left, area.top + SIZE, area.left + SIZE, area.bottom - SIZE));
+var right = Axis("right", R(area.right - SIZE, area.top + SIZE, area.right, area.bottom - SIZE));
+
+function redraw() {
+    context.canvas.width = window.innerWidth - 5;
+    context.canvas.height = window.innerHeight - 5;
+
+    context.fillStyle = "#000";
+    context.fillRect(0, 0, window.innerWidth, window.innerHeight);
+    
+    context.fillStyle = "#fff";
+    context.fillText((mouseZ() * 180 / Math.PI).toFixed(2), 20, 20);
+    
+    top.draw(context);
+    left.draw(context);
+    bottom.draw(context);
+    right.draw(context);
+}
+
+document.addEventListener("mousemove", function (ev) {
+    var r = view.getBoundingClientRect();
+    mouse.x = ev.clientX - r.left;
+    mouse.y = ev.clientY - r.top;
+    redraw();
+});
+
+redraw();
+})();
+</script>
+</html>

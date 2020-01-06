@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title></title>
+	<style type="text/css">
+		#view {
+		    background: #fff;
+		}
+		body, html {
+		    background: #444;
+		    width: 100%;
+		    height: 100%;
+		    margin: 0px;
+		}
+	</style>
+</head>
+<body>
+<canvas id="view"></canvas>
+</body>
+<script type="text/javascript">
+var view = document.getElementById("view");
+var context = view.getContext("2d");
+
+var area = R(0, 0, 640, 480).insetBy(5);
+
+function rcolor(lightness) {
+    return 'hsla(' + (Math.random() * 360 | 0) + ',70%,' + (lightness || 70) + '%,0.8)';
+}
+
+function R(left, top, right, bottom) {
+    return {
+        left: left,
+        top: top || left,
+        right: right || left,
+        bottom: bottom || top || left,
+
+        clone: function () {
+            return R(this.left, this.top, this.right, this.bottom);
+        },
+
+        get width() {
+            return this.right - this.left;
+        },
+        get height() {
+            return this.bottom - this.top;
+        },
+        get size() {
+            return {
+                x: this.width,
+                y: this.height
+            }
+        },
+        // inset/outset by a single value
+        insetBy: function (v) {
+            return R(this.left + v, this.top + v, this.right - v, this.bottom - v);
+        },
+        outsetBy: function (v) {
+            return insetBy(-v);
+        },
+        // inset explicitly each side
+        inset: function (sides) {
+            return R(this.left + sides.left, this.top + sides.top, this.right - sides.right, this.bottom - sides.bottom);
+        },
+        outset: function (sides) {
+            return R(this.left - sides.left, this.top - sides.top, this.right + sides.right, this.bottom + sides.bottom);
+        },
+        offset: function (p) {
+            return R(this.left + p.x, this.top + p.y, this.right + p.x, this.bottom + p.y);
+        },
+        contains: function (pt) {
+            return (this.left < pt.x) && (pt.x < this.right) && (this.top < pt.y) && (pt.y < this.bottom);
+        },
+        stroke: function (context, color, lineWidth) {
+            context.lineWidth = lineWidth || 2;
+            context.strokeStyle = color;
+            context.beginPath();
+            context.rect(this.left, this.top, this.right - this.left, this.bottom - this.top);
+            context.closePath();
+            context.stroke();
+        },
+        fill: function (context, color) {
+            context.fillStyle = color;
+            context.fillRect(this.left, this.top, this.right - this.left, this.bottom - this.top);
+        },
+        toString: function () {
+            return "[" + [this.left, this.top, this.right, this.bottom].join(", ") + "]";
+        }
+    };
+}
+
+function Menu(caption, children) {
+    var m = {
+        active: false,
+        color: rcolor(70),
+        size: {
+            x: 200,
+            y: 60
+        },
+        rect: R(0, 0, 0, 0),
+        index: 0,
+        caption: caption,
+        children: children || [],
+        parent: null,
+        layout: function (context, x, y) {
+            this.rect = R(x, y - this.size.y / 2, x + this.size.x, y + this.size.y / 2);
+
+            var ty = this.size.y * (this.children.length - 1);
+            for (var i = 0; i < this.children.length; i += 1) {
+                var cx = x + this.size.x,
+                    cy = y - ty / 2 + this.size.y * i;
+                this.children[i].layout(context, cx, cy);
+            }
+        },
+
+        activate: function () {
+            this.active = true;
+        },
+        deactivate: function () {
+            if (!this.active) return;
+            this.active = false;
+            this.deactivateChildren();
+        },
+        deactivateChildren: function(){
+            for (var i = 0; i < this.children.length; i += 1) {
+                this.children[i].deactivate();
+            }
+        },
+        draw: function (context) {
+            context.fillStyle = this.active ? "#fff" : "#aaa";
+            context.strokeStyle = "#555";
+            
+            context.beginPath();
+            
+            var tr = this.rect.clone(),
+                sz = this.rect.width/3;
+            
+            //if(this.children.length == 0)
+            //    tr.right = area.right;
+            
+            if(this.parent == null){
+                context.rect(tr.left, tr.top, tr.width, tr.height);
+            } else {
+                var pr = this.parent.rect,
+                    i = this.index,
+                    t = this.parent.children.length;
+                
+                context.moveTo(pr.right, pr.top + pr.height*i/t);
+                context.lineTo(tr.left + sz, tr.top);
+                context.lineTo(tr.right, tr.top);
+                context.lineTo(tr.right, tr.bottom);
+                context.lineTo(tr.left + sz, tr.bottom);
+                context.lineTo(pr.right, pr.top + pr.height*(i+1)/t);
+            }
+            
+            context.closePath();
+            context.fill();
+            context.stroke();
+            
+            if(mouse.down){
+                if (context.isPointInPath(mouse.x, mouse.y) && !this.active) {
+                    if(this.parent !== null){
+                        this.parent.deactivateChildren();
+                    }
+                    this.activate();
+                }
+            } else {
+                this.deactivate();
+            }
+            
+            context.fillStyle = "#222";
+            context.font = "40px Helvetica";
+            context.fillText(this.caption, this.rect.left + this.rect.width/3 + 5, this.rect.bottom - 15);
+            if (!this.active) return;
+            for (var i = 0; i < this.children.length; i += 1) {
+                this.children[i].draw(context);
+            }
+            
+            if(this.parent == null){
+                context.beginPath();
+                var bx = this.size.x * 3 + 100;
+                context.rect(bx, area.top, 100, area.height);
+                context.closePath();
+                var inside = context.isPointInPath(mouse.x, mouse.y);
+                context.fillStyle = inside ? "#8f8" : "#383";
+                context.fill();
+            }
+        }
+    }
+    for (var i = 0; i < m.children.length; i += 1) {
+        m.children[i].parent = m;
+        m.children[i].index = i;
+    }
+    return m;
+}
+
+var menu = Menu(">", [
+    Menu("A", [Menu("ax"), Menu("ay"), Menu("az")]), 
+    Menu("B", [Menu("bx"), Menu("by"), Menu("bz"), Menu("bw"), Menu("bq")]), 
+    Menu("C", [Menu("cx"), Menu("cy"), Menu("cz")]), 
+    Menu("D", [Menu("dx"), Menu("dy"), Menu("dz")])
+]);
+
+var mouse = {
+    x: 640,
+    y: 480,
+    down: false
+};
+
+function redraw() {
+    area = R(5, 5, window.innerWidth - 10, window.innerHeight - 10);
+    
+    context.canvas.width = window.innerWidth - 5;
+    context.canvas.height = window.innerHeight - 5;
+
+    context.fillStyle = "#000";
+    context.fillRect(0, 0, window.innerWidth, window.innerHeight);
+
+    context.fillStyle = mouse.down ? "#0f0" : "#fff";
+    context.fillRect(mouse.x - 1, mouse.y - 1, 3, 3);
+    
+    menu.layout(context, area.left, area.top + area.height / 2);
+    menu.draw(context);
+}
+
+document.addEventListener("mousedown", function (ev) {
+    mouse.down = true;
+    redraw();
+});
+
+document.addEventListener("mouseup", function (ev) {
+    mouse.down = false;
+    redraw();
+});
+
+document.addEventListener("touchstart", function (ev) {
+    mouse.down = true;
+    redraw();
+});
+
+document.addEventListener("touchend", function (ev) {
+    mouse.down = false;
+    redraw();
+});
+
+document.addEventListener("touchcancel", function (ev) {
+    mouse.down = false;
+    redraw();
+});
+
+document.addEventListener("mousemove", function (ev) {
+    var r = view.getBoundingClientRect();
+    mouse.x = ev.clientX - r.left;
+    mouse.y = ev.clientY - r.top;
+    redraw();
+});
+
+document.addEventListener("touchmove", function (ev) {
+    var r = view.getBoundingClientRect();
+    mouse.x = ev.touches[0].clientX - r.left;
+    mouse.y = ev.touches[0].clientY - r.top;
+    ev.preventDefault();
+    redraw();
+});
+
+redraw();
+</script>
+</html>

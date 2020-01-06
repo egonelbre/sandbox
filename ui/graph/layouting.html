@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Graph Layouting</title>
+	<style type="text/css">
+		#view { background: #fff; }
+		body, html { background: #444; width: 100%; height: 100%; margin: 0px;}
+	</style>
+</head>
+<body>
+	<canvas id="view"></canvas>
+</body>
+<script type="text/javascript">
+var view = document.getElementById("view");
+var context = view.getContext("2d");
+
+var area = R(0,0,640,480).insetBy(5);
+
+function rcolor(lightness){
+  return 'hsla(' + (Math.random()*360|0) + ',70%,' + (lightness||70) + '%,0.8)';
+}
+
+function R(left, top, right, bottom){
+  return {
+    left:left, top:top||left, right:right||left, bottom:bottom||top||left,
+
+    clone: function(){ return R(this.left, this.top, this.right, this.bottom); },
+
+    get width(){ return this.right - this.left; },
+    get height(){ return this.bottom - this.top; },
+    get size(){ return {x: this.width, y: this.height}},
+    // inset/outset by a single value
+    insetBy: function(v){
+      return R(this.left + v, this.top + v, this.right - v, this.bottom - v);
+    },
+    outsetBy: function(v){ return insetBy(-v); },
+    // inset explicitly each side
+    inset: function(sides){
+      return R(this.left + sides.left, this.top + sides.top, this.right - sides.right, this.bottom - sides.bottom);
+    },
+    outset: function(sides){
+      return R(this.left - sides.left, this.top - sides.top, this.right + sides.right, this.bottom + sides.bottom);
+    },
+    offset: function(p){
+      return R(this.left + p.x, this.top + p.y, this.right + p.x, this.bottom + p.y);
+    },
+    stroke: function(context, color, lineWidth){
+      context.lineWidth = lineWidth || 2;
+      context.strokeStyle = color;
+      context.beginPath();
+      context.rect(this.left, this.top, this.right - this.left, this.bottom - this.top);
+      context.closePath();
+      context.stroke();
+    },
+    fill: function(context, color){
+      context.fillStyle = color;
+      context.fillRect(this.left, this.top, this.right - this.left, this.bottom - this.top);
+    },
+    toString: function(){
+      return "[" + [this.left,this.top,this.right,this.bottom].join(", ") + "]";
+    }
+  };
+}
+
+function NewBlock(name, opts, children){
+  var b = {
+    name: name,
+    color: rcolor(),
+    size: { x:"100%", y:"100%" },
+    position: "center",
+    padding: R(14),
+    rect: R(0),
+    children: children || [],
+    layout: function(rect){
+      this.rect = rect;
+      // initial size of the center rect
+      var center = rect.inset(this.padding);
+      // first assign positions to the side elements
+      for(var i = 0; i < this.children.length; i += 1){
+        var c = this.children[i];
+        if(c.position == "center"){ continue; }
+
+        var centerSize = center.size,
+            csz = c.calculateSize(centerSize);
+
+        csz.x = Math.min(csz.x, centerSize.x);
+        csz.y = Math.min(csz.y, centerSize.y);
+
+        var cr = center.clone();
+        // assign the child rect and update the center rect
+        if (c.position == "left") {
+          cr.right = cr.left + csz.x;
+          center.left += csz.x;
+        } else if (c.position == "right") {
+          cr.left = cr.right - csz.x;
+          center.right -= csz.x;
+        } else if (c.position == "top") {
+          cr.bottom = cr.top + csz.y;
+          center.top += csz.y;
+        } else if (c.position == "bottom") {
+          cr.top = cr.bottom - csz.y;
+          center.bottom -= csz.y;
+        }
+        // child position is now fixed and can be updated;
+        c.layout(cr);
+      }
+      // we now have the final center rect
+      // use float left style layouting for center elements
+      var offsetX = 0, offsetY = 0, maxHeight = 0, centerSize = center.size,
+          EPS = 1/*px*/;
+      
+      for(var i = 0; i < this.children.length; i += 1){
+        var c = this.children[i];
+        if(c.position !== "center"){ continue; }
+        var csz = c.calculateSize(centerSize);
+
+        // if we are over the right side, reset the x offset
+        if(offsetX + csz.x > centerSize.x + EPS){
+          offsetX = 0;
+          offsetY += maxHeight;
+          maxHeight = 0;
+        }
+
+        maxHeight = Math.max(maxHeight, csz.y);
+        var r = R(center.left + offsetX, center.top + offsetY, 0,0);
+        r.right = r.left + csz.x;
+        r.bottom = r.top + csz.y;
+
+        c.layout(r);
+
+        // move the x position forward
+        offsetX += csz.x;
+      }
+    },
+    calculateSize: function(sr){
+      var rx = /%/,
+          sz = {x:0, y:0};
+      if(rx.test(this.size.x)){
+        sz.x = sr.x * parseFloat(this.size.x) / 100;
+      } else {
+        sz.x = this.size.x | 0;
+      }
+      if(rx.test(this.size.y)){
+        sz.y = sr.y * parseFloat(this.size.y) / 100;
+      } else {
+        sz.y = this.size.y | 0;
+      }
+      return sz;
+    },
+    draw: function(context){
+      this.rect.stroke(context, this.color);
+      var r = this.rect.inset(this.padding);
+      r.stroke(context, this.color);
+
+      context.fillStyle = "#fff";
+      context.font = "11px Courier";
+      context.fillText(this.name, this.rect.left + 7, this.rect.top + 10);
+      for(var i = 0; i < this.children.length; i += 1){
+        var c = this.children[i];
+        c.draw(context);
+      }
+    }
+  };
+
+  for(opt in opts){
+    if(opts.hasOwnProperty(opt))
+      b[opt] = opts[opt];
+  }
+  return b;
+}
+
+var main = NewBlock("Main", {}, [
+  NewBlock("Legend", {size: {x: 100, y:"100%"}, position: "right"}),
+  NewBlock("Info", {size: {x: 100, y:"100%"}, position: "left"}),
+  NewBlock("Graph 1", {size: {x: "100%", y:"50%"}, position: "center"},[
+    NewBlock("X", {size: {x: "100%", y:30}, position: "bottom"}),
+    NewBlock("Y", {size: {x: 30, y:"100%"}, position: "left"}),
+    NewBlock("Plot", {size: {x: "100%", y:"100%"}, position: "center"})
+  ]),
+  NewBlock("Graph 2", {size: {x: "100%", y:"50%"}, position: "center"},[
+    NewBlock("X", {size: {x: "100%", y:30}, position: "bottom"}),
+    NewBlock("Y", {size: {x: 30, y:"100%"}, position: "left"}),
+    NewBlock("Plot", {size: {x: "100%", y:"100%"}, position: "center"})
+  ]),
+]);
+
+var mouse = {x:640, y:480};
+
+function redraw(){
+  context.canvas.width = window.innerWidth - 5;
+  context.canvas.height = window.innerHeight - 5;
+  
+    context.fillStyle = "#000";
+  context.fillRect(0,0,window.innerWidth,window.innerHeight);
+
+  var r = area.clone();
+  r.right = mouse.x;
+  r.bottom = mouse.y;
+  main.layout(r);
+  main.draw(context);
+}
+
+document.addEventListener("mousemove", function(ev){
+  var r = view.getBoundingClientRect();
+  mouse.x = ev.clientX - r.left;
+  mouse.y = ev.clientY - r.top;
+  redraw();
+});
+
+redraw();
+</script>
+</html>

@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Graphing</title>
+</head>
+<body>
+<style type="text/css">
+#view {
+    border: 1px solid #000;
+    width: 700px;
+    height: 500px;
+    margin: 30px;
+}
+</style>
+<canvas id="view"></canvas>
+
+<script type="text/javascript">
+var view = document.getElementById("view"),
+    ctx = view.getContext("2d");
+view.width = 700;
+view.height = 500;
+
+ctx.fillStyle = "#000";
+ctx.fillRect(40, 40, 200, 200);
+
+function GraphWindow(canvas) {
+    this.canvas = canvas;
+    this.datasets = {};
+    this.children = {};
+    this.properties = {
+        background: "#fff"
+    };
+}
+
+function drawChildren(canvas, children, bounds){
+    for (var childName in children) {
+        var child = children[childName];
+        child.draw(canvas, bounds);
+    }
+}
+
+GraphWindow.prototype = {
+    draw: function () {
+        var canvas = this.canvas;
+        var fullRect = new Rect(0, 0, 700, 500);
+        canvas.fillStyle = this.properties.background;
+        canvas.fillRect(fullRect.left, fullRect.top, fullRect.width, fullRect.height);
+        drawChildren(canvas, this.children, fullRect);
+    }
+};
+
+function Rect(left, top, right, bottom) {
+    this.left = left;
+    this.top = top;
+    this.right = right;
+    this.bottom = bottom;
+}
+
+Rect.prototype = {
+    get width() { return this.right - this.left; },
+    get height() { return this.bottom - this.top; },
+    get topLeft() { return {x:this.left, y:this.top}},
+    get topRight() { return {x:this.right, y:this.top} },
+    get bottomLeft() { return {x:this.left, y:this.bottom} },
+    get bottomRight() { return {x:this.right, y:this.bottom} },
+    shrinkSides: function (r) {
+        return new Rect(this.left + r.left, this.top + r.top, this.right - r.right, this.bottom - r.bottom);
+    },
+    growSides: function (r) {
+        return new Rect(this.left - r.left, this.top - r.top, this.right + r.right, this.bottom + r.bottom);
+    }
+};
+
+function drawRect(canvas, bounds){
+    canvas.rect(bounds.left, bounds.top, bounds.width, bounds.height);
+}
+
+function Frame(window) {
+    this.window = window;
+    this.children = {};
+    this.margin = new Rect(10, 10, 10, 10);
+    this.properties = {
+        border: {
+            width: 0.5,
+            color: "#f00"
+        }
+    };
+}
+
+Frame.prototype = {
+    draw : function (canvas, fullRect) {
+        var bounds = fullRect.shrinkSides(this.margin);
+        startDraw(canvas);
+        drawRect(canvas, bounds);
+        strokeStyle(canvas, this.properties.border);
+        drawChildren(canvas, this.children, bounds);
+    }
+};
+
+function startDraw(canvas){
+    canvas.beginPath();
+}
+
+function drawLine(canvas, from, to){
+    canvas.moveTo(from.x, from.y);
+    canvas.lineTo(to.x, to.y);
+}
+
+function drawLineOffset(canvas, pos, offset){
+    canvas.moveTo(pos.x, pos.y);
+    canvas.lineTo(pos.x+offset.x, pos.y+offset.y);
+}
+
+function strokeStyle(canvas, style){
+    canvas.lineWidth = style.width || 1;
+    canvas.strokeStyle = style.color || "#000";
+    canvas.stroke();
+}
+
+function XAxis(window){
+    this.window = window;
+    this.children = {};
+    this.properties = {
+        min : 0,
+        max : 1,
+        tick : {
+            size : 5,
+            width : 1,
+            ticks : 10,
+            color : "#000",
+        },
+        line : {
+            width : 1,
+            color : "#000"
+        }
+    }
+}
+
+XAxis.prototype = {
+    draw : function(canvas, fullRect){
+        startDraw(canvas);
+        drawLine(canvas, fullRect.bottomLeft, fullRect.bottomRight);
+        strokeStyle(canvas, this.properties.line);
+        
+        startDraw(canvas);
+        var x, y;
+        y = fullRect.bottom;
+        for(var i = 0; i <= this.properties.tick.ticks; i += 1){
+            x = fullRect.left + i * fullRect.width / this.properties.tick.ticks;
+            drawLineOffset(canvas, {x:x,y:y}, {x:0, y:-this.properties.tick.size});
+        }
+        strokeStyle(canvas, this.properties.tick);
+    }
+}
+
+function YAxis(window){
+    this.window = window;
+    this.children = {};
+    this.properties = {
+        min : 0,
+        max : 1,
+        tick : {
+            size : 5,
+            width : 1,
+            ticks : 10,
+            color : "#000",
+        },
+        line : {
+            width : 1,
+            color : "#000"
+        }
+    }
+}
+
+YAxis.prototype = {
+    draw : function(canvas, fullRect){
+        startDraw(canvas);
+        drawLine(canvas, fullRect.topLeft, fullRect.bottomLeft);
+        strokeStyle(canvas, this.properties.line);
+        
+        startDraw(canvas);
+        var x, y;
+        x = fullRect.left;
+        for(var i = 0; i <= this.properties.tick.ticks; i += 1){
+            y = fullRect.bottom - i * fullRect.height / this.properties.tick.ticks;
+            drawLineOffset(canvas, {x:x,y:y}, {x:this.properties.tick.size, y:0});
+        }
+        strokeStyle(canvas, this.properties.tick);
+    }
+}
+
+
+var main = new GraphWindow(ctx);
+var frame = new Frame(main);
+main.children["graph"] = frame;
+frame.children["x"] = new XAxis(main);
+frame.children["y"] = new YAxis(main);
+setInterval(function () { main.draw();}, 1000);
+</script>
+</body>
+</html>

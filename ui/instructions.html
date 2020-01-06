@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Elements</title>
+<style type="text/css">
+#steps { font: 20pt bold Helvetica; }
+#steps > li { font-size: 20px; }
+
+pre.cli {
+    margin: 5px 0;
+    padding: 3px;
+    padding-left: 20px;
+    color: white;
+    border: 1px solid rgb(0, 43, 54);
+    border-radius: 10px;
+    background: rgb(0, 43, 54);
+}
+
+.step-outcomes {
+    list-style: none;
+    font-size: 15px;
+    padding-left: 20px;
+}
+
+.step-outcomes > li::before {
+    content: "✓";
+    padding-right: 10px;
+}
+</style>
+</head>
+<body>
+</body>
+<script type="text/javascript">
+function tostr(el){
+    if(el instanceof Array) return cat(el);
+    return el.outerHTML || el.toString();
+}
+
+function cat(arr, wrap){
+    wrap = wrap || function(t){ return t; };
+    var result = "";
+    for(var i = 0; i < arr.length; i += 1)
+        result += wrap(tostr(arr[i]));
+    return result;
+}
+
+function def(conf){
+    return function(el){
+        var tg = document.createElement(conf.tag || "div");
+        if(conf.id) tg.id = conf.id;
+        if(conf.clz) tg.classList.add(conf.clz);
+        tg.innerHTML = conf.proc ? conf.proc(el) : tostr(el);
+        return tostr(tg);
+    };
+}
+
+function defArr(conf){
+    var outer = def(conf),
+        sub = def({tag:conf.subtag}) ;
+    return function(){
+        return tostr(outer(cat(arguments, sub)));
+    };
+}
+
+function reExplain(text){
+    var re = /`(.*)`/g;
+    return text.replace(re, function(all, word){ 
+        return "<abbr href='glossary/" +  word + "'>" + word + "</abbr>";
+    });
+}
+
+// example use
+
+steps = defArr({tag: "ol", id:"steps", subtag:"li"});
+tests = defArr({tag: "ol", clz:"step-outcomes", subtag:"li"});
+cli = def({tag:"pre", clz:"cli", proc:reExplain});
+
+var result = steps(
+  ["Put your left foot in",
+    tests(
+      "Left foot is in front of you.",
+      "Balanced on right foot."
+  )],
+  ["Take your left foot out",
+    cli("student@server $ `out` /dev/left-foot"),
+    tests(
+      "Left foot is behind you",
+      "Balanced on right foot"
+  )]
+);
+
+document.body.innerHTML = result;
+</script>
+</html>
