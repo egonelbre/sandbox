@@ -1,0 +1,116 @@
+// canvas setup
+var d=document, c=d.body.children[0];
+var main = {
+    x : 0, 
+    y : 0,
+    w : 500,
+    h : 400
+};
+c.width = main.w;
+c.height = main.h;
+
+var cos=Math.cos, sin=Math.sin, abs=Math.abs, rand=Math.random;
+var tau = Math.PI*2;
+
+var dude = {
+    key : {
+        x : 0, y : 0
+    },
+    x : 0,
+    y : 0,
+    h : 40,
+    w : 13,
+    vx : 0,
+    vy : 0,
+    o : 0
+};
+
+var ground = {
+    x : 0,
+    y : main.h - 100,
+    h : 100,
+    w : main.w
+}
+
+c = c.getContext("2d");
+
+
+callback = function(e){
+    // Background
+    c.fillStyle = "rgba(240,255,255,1.0)";
+    c.fillRect(main.x, main.y, main.w, main.h);
+    
+    c.fillStyle = "#000";
+    c.fillRect(ground.x, ground.y, ground.w, ground.h);
+    
+    var onground = dude.y + dude.h > ground.y;
+
+    if(dude.key.x){
+        if(onground)
+            dude.vx += dude.key.x * 1.9;
+        else 
+            dude.vx += dude.key.x * 0.6;
+    } else {
+        if(onground)
+            dude.vx *= 0.1;
+    }
+
+    if(dude.key.y){
+        dude.vy -= dude.key.y*10;
+        dude.key.y *= 0.3;
+    }
+
+    dude.x += dude.vx;
+    dude.o += (dude.key.x / 2 + dude.vx) / 23;
+
+    dude.vy += 1;
+    if(!onground)
+        dude.y += dude.vy;
+
+    dude.vx *= 0.9;
+
+    if(onground){
+        dude.y = ground.y - dude.h;
+        dude.vy = -abs(dude.vy * 0.4);
+    }
+
+    c.fillStyle = "#b11";
+    c.fillRect(dude.x, dude.y, dude.w, dude.h/2);
+
+    function drawLeg(alpha){
+        var r = 20, s = 4,
+        cx = dude.x + dude.w/2,
+        cy = dude.y + dude.h - r/4,
+        dx = cos(alpha)*r*1.2*(0.3+abs(dude.vx)/20),
+        dy = sin(alpha)*r,
+        ty = cy - s + dy;
+
+        ty = ty > ground.y - s ? ground.y - s : ty;
+        c.fillRect(cx - s + dx, ty, s*2, s*2);
+    }
+
+    c.fillStyle = "#1b1";
+    drawLeg(dude.o);
+    c.fillStyle = "#11b";
+    drawLeg(dude.o + tau/2);
+}
+setInterval(callback,30);
+
+d.onkeydown=function(e){
+    console.log(e);
+    switch( e.code ){
+        case "ArrowRight" : dude.key.x = 1; break;
+        case "ArrowLeft" : dude.key.x = -1; break;
+        case "Space" :
+        case "ArrowUp" : dude.key.y = 1; break;
+    }
+};
+
+d.onkeyup = function(e){
+    switch( e.code ){
+        case "ArrowRight" : dude.key.x = 0; break;
+        case "ArrowLeft" : dude.key.x = 0; break;
+        case "Space" :
+        case "ArrowUp" : dude.key.y = 0; break;
+    }
+}
